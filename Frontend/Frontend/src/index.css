@@ -1,0 +1,68 @@
+@import "tailwindcss";
+
+@theme {
+  --color-primary: #6366f1;
+  --color-primary-hover: #818cf8;
+  --color-bg: #0f172a;
+  --color-surface: #1e293b;
+  --color-card: #1e293b;
+  --color-text: #e2e8f0;
+  --color-text-muted: #94a3b8;
+  --color-border: #334155;
+  --color-danger: #ef4444;
+  --color-danger-hover: #f87171;
+  --color-success: #22c55e;
+  --color-warning: #f59e0b;
+
+  --radius-default: 8px;
+
+  --font-inter: 'Inter', system-ui, sans-serif;
+}
+
+@layer base {
+  body {
+    @apply font-inter bg-bg text-text leading-relaxed;
+  }
+}
+
+@layer components {
+  .btn {
+    @apply px-4 py-2 rounded-default cursor-pointer font-medium text-sm transition-all active:scale-95;
+  }
+
+  .btn-primary {
+    @apply bg-primary text-white hover:bg-primary-hover;
+  }
+
+  .btn-danger {
+    @apply bg-danger text-white hover:bg-danger-hover;
+  }
+
+  .btn-sm {
+    @apply px-2.5 py-1.5 text-xs;
+  }
+
+  .btn-outline {
+    @apply bg-transparent border border-border text-text-muted hover:border-primary hover:text-primary;
+  }
+
+  .data-table {
+    @apply w-full border-separate border-spacing-0 bg-surface rounded-default overflow-hidden border border-border;
+  }
+
+  .data-table th {
+    @apply px-4 py-3 text-left font-semibold text-xs uppercase tracking-wider text-text-muted bg-black/20 border-b border-border;
+  }
+
+  .data-table td {
+    @apply px-4 py-3 border-b border-border text-sm align-middle;
+  }
+
+  .data-table tr:last-child td {
+    @apply border-b-0;
+  }
+
+  .data-table tr:hover td {
+    @apply bg-primary/5;
+  }
+}
