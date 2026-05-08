@@ -1,5 +1,4 @@
 from typing import TYPE_CHECKING, List
-#from datetime import datetime, timezone
 from sqlalchemy import Column, VARCHAR, TEXT, DECIMAL, Integer, Boolean, ARRAY, String, CheckConstraint
 from sqlmodel import Field, Relationship, SQLModel
 from app.core.base import Base
@@ -9,7 +8,7 @@ if TYPE_CHECKING:
     from app.modules.product_catalog.ingredient.models import Ingredient
 
 
-# ─── Tablas intermedias ───────────────────────────────────────────────────────
+
 
 class ProductCategory(SQLModel, table=True):
     
@@ -43,7 +42,7 @@ class ProductIngredient(SQLModel, table=True):
     )
 
 
-# ─── Modelo principal ─────────────────────────────────────────────────────────
+
 
 class Product(Base, table=True):
     
@@ -72,13 +71,13 @@ class Product(Base, table=True):
         sa_column=Column(Boolean, nullable=False, default=True)
     )
 
-    # ── Relación N:M con Category via ProductCategory ─────────────────────────
+    
     categories: List["Category"] = Relationship(
         back_populates="products",
         link_model=ProductCategory
     )
 
-    # ── Relación N:M con Ingredient via ProductIngredient ─────────────────────
+    
     ingredients: List["Ingredient"] = Relationship(
         back_populates="products",
         link_model=ProductIngredient

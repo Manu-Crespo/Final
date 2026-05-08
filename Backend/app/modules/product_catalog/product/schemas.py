@@ -4,7 +4,7 @@ from app.modules.product_catalog.category.schemas import CategoryPublic
 from app.modules.product_catalog.ingredient.schemas import IngredientPublic
 
 
-# ── Entrada ───────────────────────────────────────────────────────────────────
+
 
 class ProductCreate(BaseModel):
     
@@ -30,7 +30,7 @@ class ProductUpdate(BaseModel):
     ingredient_ids: List[int] | None = None
 
 
-# ── Salida ────────────────────────────────────────────────────────────────────
+
 
 class ProductPublic(BaseModel):
     

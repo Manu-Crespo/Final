@@ -17,7 +17,7 @@ class ProductService:
         
         self._session = session
 
-    # ── Helpers privados ──────────────────────────────────────────────────────
+    
 
     def _get_or_404(self, uow: ProductUnitOfWork, product_id: int) -> Product:
         
@@ -29,7 +29,7 @@ class ProductService:
             )
         return product
 
-    # ── Casos de uso ──────────────────────────────────────────────────────────
+    
 
     def create(self, data: ProductCreate) -> ProductPublic:
         
@@ -37,10 +37,10 @@ class ProductService:
             product_data = data.model_dump(exclude={"category_ids", "ingredient_ids"})
             product = Product(**product_data)
             
-            # Agregamos primero a la sesión para evitar SAWarning en el autoflush de las consultas subsecuentes
+            
             uow.products.add(product)
 
-            # Relacionar categorías
+            
             for cat_id in data.category_ids:
                 cat = uow.categories.get_by_id(cat_id)
                 if not cat or cat.logic_delete:
@@ -50,7 +50,7 @@ class ProductService:
                     )
                 product.categories.append(cat)
 
-            # Relacionar ingredientes
+            
             for ing_id in data.ingredient_ids:
                 ing = uow.ingredients.get_by_id(ing_id)
                 if not ing or ing.logic_delete:
@@ -86,13 +86,13 @@ class ProductService:
         with ProductUnitOfWork(self._session) as uow:
             product = self._get_or_404(uow, product_id)
 
-            # Solo aplica campos enviados por el cliente
+            
             patch = data.model_dump(exclude_unset=True, exclude={"category_ids", "ingredient_ids"})
             for field, value in patch.items():
                 setattr(product, field, value)
 
             if data.category_ids is not None:
-                product.categories = []  # Limpiar relaciones viejas
+                product.categories = []  
                 for cat_id in data.category_ids:
                     cat = uow.categories.get_by_id(cat_id)
                     if not cat or cat.logic_delete:
@@ -103,7 +103,7 @@ class ProductService:
                     product.categories.append(cat)
 
             if data.ingredient_ids is not None:
-                product.ingredients = []  # Limpiar relaciones viejas
+                product.ingredients = []  
                 for ing_id in data.ingredient_ids:
                     ing = uow.ingredients.get_by_id(ing_id)
                     if not ing or ing.logic_delete:

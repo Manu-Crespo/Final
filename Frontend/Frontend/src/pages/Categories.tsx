@@ -1,64 +1,33 @@
-import React, { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { api } from '../api/api';
+import React from 'react';
 import { Modal } from '../components/Modal';
 import { ConfirmDialog } from '../components/ConfirmDialog';
-import { Category, ApiResponse } from '../types';
-import { parseErrors } from '../utils/errorUtils';
+import { useCategories } from '../hooks/useCategories';
+import { CategoryForm } from '../components/CategoryForm';
 
 export const Categories: React.FC = () => {
-  const queryClient = useQueryClient();
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editing, setEditing] = useState<Category | null>(null);
-  const [formData, setFormData] = useState({ name: '', description: '', parent_id: null as number | null, image_url: '' });
-  const [errors, setErrors] = useState<Record<string, string>>({});
-  const [confirmState, setConfirmState] = useState<{ open: boolean; id: number | null }>({ open: false, id: null });
-
-  const { data, isLoading, isError } = useQuery<CategoryResponse>({
-    queryKey: ['categories'],
-    queryFn: async () => (await api.get('/categories/')).data,
-  });
-
-  const mutation = useMutation({
-    mutationFn: async (d: any) => {
-      const payload = { ...d, parent_id: d.parent_id || null, image_url: d.image_url || null };
-      if (editing) return api.patch(`/categories/${editing.id}`, payload);
-      return api.post('/categories/', payload);
-    },
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['categories'] }); closeModal(); },
-    onError: (err: any) => setErrors(parseErrors(err)),
-  });
-
-  const deleteMutation = useMutation({
-    mutationFn: (id: number) => api.delete(`/categories/${id}`),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['categories'] }),
-  });
-
-  const handleSubmit = (e: React.FormEvent) => { e.preventDefault(); mutation.mutate(formData); };
-
-  const openModal = (cat?: Category) => {
-    if (cat) {
-      setEditing(cat);
-      setFormData({ name: cat.name, description: cat.description || '', parent_id: cat.parent_id, image_url: cat.image_url || '' });
-    } else {
-      setEditing(null);
-      setFormData({ name: '', description: '', parent_id: null, image_url: '' });
-    }
-    setIsModalOpen(true);
-  };
-  const closeModal = () => { setIsModalOpen(false); setEditing(null); setErrors({}); };
-
-  const handleDelete = (id: number) => setConfirmState({ open: true, id });
-  const confirmDelete = () => {
-    if (confirmState.id) deleteMutation.mutate(confirmState.id);
-    setConfirmState({ open: false, id: null });
-  };
+  const {
+    categories,
+    parents,
+    isLoading,
+    isError,
+    isModalOpen,
+    editing,
+    formData,
+    errors,
+    confirmState,
+    mutation,
+    openModal,
+    closeModal,
+    handleSubmit,
+    handleDelete,
+    confirmDelete,
+    cancelDelete,
+    setFormField,
+  } = useCategories();
 
   if (isLoading) return <div className="p-8 text-text-muted animate-pulse">Cargando categorías...</div>;
   if (isError) return <div className="p-8 text-danger bg-danger/10 rounded">Error al cargar categorías.</div>;
 
-  const all = data?.data || [];
-  const parents = all.filter(c => c.parent_id === null);
   const parentName = (pid: number | null) => parents.find(p => p.id === pid)?.name || '-';
 
   return (
@@ -81,7 +50,7 @@ export const Categories: React.FC = () => {
             </tr>
           </thead>
           <tbody>
-            {all.filter(c => c.parent_id !== null).map(cat => (
+            {categories.filter(c => c.parent_id !== null).map(cat => (
               <tr key={cat.id}>
                 <td>{cat.id}</td>
                 <td className="w-16">
@@ -105,7 +74,7 @@ export const Categories: React.FC = () => {
                 </td>
               </tr>
             ))}
-            {all.filter(c => c.parent_id !== null).length === 0 && (
+            {categories.filter(c => c.parent_id !== null).length === 0 && (
               <tr>
                 <td colSpan={6} className="text-center py-12 text-text-muted italic">No hay subcategorías registradas.</td>
               </tr>
@@ -115,49 +84,24 @@ export const Categories: React.FC = () => {
       </div>
 
       <Modal isOpen={isModalOpen} onClose={closeModal} title={editing ? 'Editar Categoría' : 'Nueva Categoría'}>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {errors.global && (
-            <div className="p-3 bg-danger/10 border border-danger/20 rounded text-xs text-danger">
-              {errors.global}
-            </div>
-          )}
-          <div className="space-y-1.5">
-            <label className="block text-xs font-semibold text-text-muted uppercase tracking-wider">Categoría Madre</label>
-            <select value={formData.parent_id ?? ''} onChange={e => setFormData({ ...formData, parent_id: e.target.value ? Number(e.target.value) : null })}
-              className={`w-full bg-bg border ${errors.parent_id ? 'border-danger' : 'border-border'} rounded-default p-2 text-text focus:outline-none focus:border-primary transition-colors`}>
-              <option value="">Sin categoría madre</option>
-              {parents.filter(p => p.id !== editing?.id).map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-            </select>
-            {errors.parent_id && <p className="text-danger text-[10px] mt-1">{errors.parent_id}</p>}
-          </div>
-          <div className="space-y-1.5">
-            <label className="block text-xs font-semibold text-text-muted uppercase tracking-wider">Nombre</label>
-            <input type="text" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })}
-              className={`w-full bg-bg border ${errors.name ? 'border-danger' : 'border-border'} rounded-default p-2 text-text focus:outline-none focus:border-primary transition-colors`} />
-            {errors.name && <p className="text-danger text-[10px] mt-1">{errors.name}</p>}
-          </div>
-          <div className="space-y-1.5">
-            <label className="block text-xs font-semibold text-text-muted uppercase tracking-wider">Descripción</label>
-            <input type="text" value={formData.description} onChange={e => setFormData({ ...formData, description: e.target.value })}
-              className={`w-full bg-bg border ${errors.description ? 'border-danger' : 'border-border'} rounded-default p-2 text-text focus:outline-none focus:border-primary transition-colors`} />
-            {errors.description && <p className="text-danger text-[10px] mt-1">{errors.description}</p>}
-          </div>
-          <div className="space-y-1.5">
-            <label className="block text-xs font-semibold text-text-muted uppercase tracking-wider">URL de Imagen</label>
-            <input type="text" placeholder="https://..." value={formData.image_url} onChange={e => setFormData({ ...formData, image_url: e.target.value })}
-              className={`w-full bg-bg border ${errors.image_url ? 'border-danger' : 'border-border'} rounded-default p-2 text-text focus:outline-none focus:border-primary transition-colors mb-2`} />
-            {errors.image_url && <p className="text-danger text-[10px] mt-1 mb-2">{errors.image_url}</p>}
-            {formData.image_url && <img src={formData.image_url} alt="preview" className="w-full h-24 object-cover rounded border border-border" />}
-          </div>
-          <button type="submit" className="btn btn-primary w-full mt-4 shadow-lg shadow-primary/20" disabled={mutation.isPending}>
-            {mutation.isPending ? 'Guardando...' : 'Confirmar Guardado'}
-          </button>
-        </form>
+        <CategoryForm 
+          formData={formData}
+          errors={errors}
+          parents={parents}
+          editingId={editing?.id}
+          isPending={mutation.isPending}
+          onSubmit={handleSubmit}
+          onFieldChange={setFormField}
+        />
       </Modal>
 
-      <ConfirmDialog isOpen={confirmState.open} title="Eliminar categoría"
+      <ConfirmDialog 
+        isOpen={confirmState.open} 
+        title="Eliminar categoría"
         message="¿Estás seguro de que querés eliminar esta categoría? Esta acción no se puede deshacer."
-        onConfirm={confirmDelete} onCancel={() => setConfirmState({ open: false, id: null })} />
+        onConfirm={confirmDelete} 
+        onCancel={cancelDelete} 
+      />
     </div>
   );
 };

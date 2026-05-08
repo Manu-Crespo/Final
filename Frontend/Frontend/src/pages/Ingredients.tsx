@@ -1,57 +1,28 @@
-import React, { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { api } from '../api/api';
+import React from 'react';
 import { Modal } from '../components/Modal';
 import { ConfirmDialog } from '../components/ConfirmDialog';
-import { Ingredient, ApiResponse } from '../types';
-import { parseErrors } from '../utils/errorUtils';
+import { useIngredients } from '../hooks/useIngredients';
+import { IngredientForm } from '../components/IngredientForm';
 
 export const Ingredients: React.FC = () => {
-  const queryClient = useQueryClient();
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editing, setEditing] = useState<Ingredient | null>(null);
-  const [formData, setFormData] = useState({ name: '', description: '', is_allergenic: false });
-  const [errors, setErrors] = useState<Record<string, string>>({});
-  const [confirmState, setConfirmState] = useState<{ open: boolean; id: number | null }>({ open: false, id: null });
-
-  const { data, isLoading, isError } = useQuery<IngredientResponse>({
-    queryKey: ['ingredients'],
-    queryFn: async () => (await api.get('/ingredients/')).data,
-  });
-
-  const mutation = useMutation({
-    mutationFn: async (d: any) => {
-      if (editing) return api.patch(`/ingredients/${editing.id}`, d);
-      return api.post('/ingredients/', d);
-    },
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['ingredients'] }); closeModal(); },
-    onError: (err: any) => setErrors(parseErrors(err)),
-  });
-
-  const deleteMutation = useMutation({
-    mutationFn: (id: number) => api.delete(`/ingredients/${id}`),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['ingredients'] }),
-  });
-
-  const handleSubmit = (e: React.FormEvent) => { e.preventDefault(); mutation.mutate(formData); };
-
-  const openModal = (ing?: Ingredient) => {
-    if (ing) {
-      setEditing(ing);
-      setFormData({ name: ing.name, description: ing.description || '', is_allergenic: ing.is_allergenic });
-    } else {
-      setEditing(null);
-      setFormData({ name: '', description: '', is_allergenic: false });
-    }
-    setIsModalOpen(true);
-  };
-  const closeModal = () => { setIsModalOpen(false); setEditing(null); setErrors({}); };
-
-  const handleDelete = (id: number) => setConfirmState({ open: true, id });
-  const confirmDelete = () => {
-    if (confirmState.id) deleteMutation.mutate(confirmState.id);
-    setConfirmState({ open: false, id: null });
-  };
+  const {
+    ingredients,
+    isLoading,
+    isError,
+    isModalOpen,
+    editing,
+    formData,
+    errors,
+    confirmState,
+    mutation,
+    openModal,
+    closeModal,
+    handleSubmit,
+    handleDelete,
+    confirmDelete,
+    cancelDelete,
+    setFormField,
+  } = useIngredients();
 
   if (isLoading) return <div className="p-8 text-text-muted animate-pulse">Cargando ingredientes...</div>;
   if (isError) return <div className="p-8 text-danger bg-danger/10 rounded">Error al cargar ingredientes.</div>;
@@ -75,7 +46,7 @@ export const Ingredients: React.FC = () => {
             </tr>
           </thead>
           <tbody>
-            {data?.data.map(ing => (
+            {ingredients.map(ing => (
               <tr key={ing.id}>
                 <td>{ing.id}</td>
                 <td className="font-medium text-white">{ing.name}</td>
@@ -94,7 +65,7 @@ export const Ingredients: React.FC = () => {
                 </td>
               </tr>
             ))}
-            {data?.data.length === 0 && (
+            {ingredients.length === 0 && (
               <tr>
                 <td colSpan={5} className="text-center py-12 text-text-muted italic">No hay ingredientes registrados.</td>
               </tr>
@@ -104,38 +75,22 @@ export const Ingredients: React.FC = () => {
       </div>
 
       <Modal isOpen={isModalOpen} onClose={closeModal} title={editing ? 'Editar Ingrediente' : 'Nuevo Ingrediente'}>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {errors.global && (
-            <div className="p-3 bg-danger/10 border border-danger/20 rounded text-xs text-danger">
-              {errors.global}
-            </div>
-          )}
-          <div className="space-y-1.5">
-            <label className="block text-xs font-semibold text-text-muted uppercase tracking-wider">Nombre</label>
-            <input type="text" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })}
-              className={`w-full bg-bg border ${errors.name ? 'border-danger' : 'border-border'} rounded-default p-2 text-text focus:outline-none focus:border-primary transition-colors`} />
-            {errors.name && <p className="text-danger text-[10px] mt-1">{errors.name}</p>}
-          </div>
-          <div className="space-y-1.5">
-            <label className="block text-xs font-semibold text-text-muted uppercase tracking-wider">Descripción</label>
-            <input type="text" value={formData.description} onChange={e => setFormData({ ...formData, description: e.target.value })}
-              className={`w-full bg-bg border ${errors.description ? 'border-danger' : 'border-border'} rounded-default p-2 text-text focus:outline-none focus:border-primary transition-colors`} />
-            {errors.description && <p className="text-danger text-[10px] mt-1">{errors.description}</p>}
-          </div>
-          <div className="flex items-center gap-2 py-1">
-            <input type="checkbox" checked={formData.is_allergenic} onChange={e => setFormData({ ...formData, is_allergenic: e.target.checked })} 
-              className="w-4 h-4 accent-primary" />
-            <label className="text-sm text-text-muted font-medium">¿Es un ingrediente alérgeno?</label>
-          </div>
-          <button type="submit" className="btn btn-primary w-full mt-4 shadow-lg shadow-primary/20" disabled={mutation.isPending}>
-            {mutation.isPending ? 'Guardando...' : 'Confirmar Guardado'}
-          </button>
-        </form>
+        <IngredientForm 
+          formData={formData}
+          errors={errors}
+          isPending={mutation.isPending}
+          onSubmit={handleSubmit}
+          onFieldChange={setFormField}
+        />
       </Modal>
 
-      <ConfirmDialog isOpen={confirmState.open} title="Eliminar ingrediente"
+      <ConfirmDialog 
+        isOpen={confirmState.open} 
+        title="Eliminar ingrediente"
         message="¿Estás seguro de que querés eliminar este ingrediente? Esta acción no se puede deshacer."
-        onConfirm={confirmDelete} onCancel={() => setConfirmState({ open: false, id: null })} />
+        onConfirm={confirmDelete} 
+        onCancel={cancelDelete} 
+      />
     </div>
   );
 };

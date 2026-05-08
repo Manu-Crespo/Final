@@ -8,7 +8,7 @@ from app.core.database import create_db_and_tables
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Crear tablas al iniciar la aplicación
+    
     create_db_and_tables()
     yield
 
@@ -26,8 +26,6 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
 
-    # Aquí incluirías tus otros archivos de rutas
-    # app.include_router(user.router)
     app.include_router(product_router, prefix="/products", tags=["products"])
     app.include_router(category_router, prefix="/categories", tags=["categories"])
     app.include_router(ingredient_router, prefix="/ingredients", tags=["ingredients"])

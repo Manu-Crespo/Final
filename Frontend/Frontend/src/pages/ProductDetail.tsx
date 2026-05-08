@@ -1,17 +1,9 @@
 import React from 'react';
-import { useParams, Link } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
-import { api } from '../api/api';
-import { Product } from '../types';
+import { Link } from 'react-router-dom';
+import { useProductDetail } from '../hooks/useProductDetail';
 
 export const ProductDetail: React.FC = () => {
-  const { id } = useParams<{ id: string }>();
-
-  const { data: product, isLoading, isError } = useQuery<Product>({
-    queryKey: ['product', id],
-    queryFn: async () => (await api.get(`/products/${id}`)).data,
-    enabled: !!id,
-  });
+  const { product, isLoading, isError } = useProductDetail();
 
   if (isLoading) return <div className="p-8 text-text-muted">Cargando detalles del producto...</div>;
   if (isError || !product) return <div className="p-8 text-danger">Error al cargar el producto.</div>;
